@@ -1,14 +1,4 @@
-python generate_root_ca.py 
-python generate_ca_signed_key.py
-python create_dms_detached.py
-python verify.py
-  
-run the above command 
-flow is as below
-
-
-
-
+```
 +-----------------------------------+
 | Step 1: Generate Root CA          |
 |                                   |
@@ -85,7 +75,7 @@ flow is as below
 |  +-----------------------------+  |
 |  | Sign the attributes with    |  |
 |  | signing private key         |  |
-|  +-----------------------------+  |
+|  [+-----------------------------+  |
 |  | Wrap SignedData in ContentInfo| |
 |  +-----------------------------+  |
 |  | Save CMS structure to DER   |  |
@@ -127,3 +117,11 @@ flow is as below
 |  | against Root CA certificate |  |
 |  +-----------------------------+  |
 +-----------------------------------+
+```
+Run the following commands:
+
+```sh
+python generate_root_ca.py
+python generate_ca_signed_key.py
+python create_dms_detached.py
+python verify.py
