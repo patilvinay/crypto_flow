@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography import x509
 
 # Load the DER file
-with open("signed_data.der", "rb") as f:
+with open("signed_data_with_attrs.der", "rb") as f:
     der_data = f.read()
 
 # Parse the DER data
@@ -20,6 +20,29 @@ data_to_verify = b"This is the data to be signed."
 # Extract the signer information
 signer_info = signed_data['signer_infos'][0]
 digest_algorithm = signer_info['digest_algorithm']['algorithm'].native
+
+# Extract the signed attributes
+signed_attrs = signer_info['signed_attrs']
+
+# Find the message_digest attribute
+message_digest = None
+for attr in signed_attrs:
+    if attr['type'].native == 'message_digest':
+        message_digest = attr['values'][0].native
+        break
+
+if message_digest is None:
+    raise ValueError("message_digest attribute not found in signed attributes")
+
+# Verify the message digest
+hasher = hashes.Hash(hashes.SHA256())
+hasher.update(data_to_verify)
+hashed_data = hasher.finalize()
+
+if hashed_data != message_digest:
+    print("Message digest verification failed!")
+else:
+    print("Message digest verification succeeded!")
 
 # Extract the signing certificate
 signing_certificate = signed_data['certificates'][0].chosen
@@ -59,7 +82,6 @@ with open("root_ca_certificate.pem", "rb") as f:
     pem_root_ca_certificate = f.read()
 root_ca_cert = x509.load_pem_x509_certificate(pem_root_ca_certificate)
 
-
 # Verify the signing certificate against the Root CA certificate
 try:
     root_ca_cert.public_key().verify(
@@ -71,13 +93,3 @@ try:
     print("Signing certificate is valid and trusted by the Root CA.")
 except Exception as e:
     print(f"Signing certificate verification failed: {e}")
-
-
-signer_info = signed_data['signer_infos'][0]
-
-# Check if the signed_attrs field is present
-if signer_info['signed_attrs'].native is not None:
-    # Extract the digest
-    digest = signer_info['signed_attrs'][1]['values'][0].native
-else:
-    print("The signed_attrs field is not present.")

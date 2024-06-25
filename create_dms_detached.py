@@ -4,6 +4,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography import x509
+from datetime import datetime
+from asn1crypto import algos, core, cms, x509
 
 # Load signing private key
 with open("signing_private_key.pem", "rb") as f:
@@ -33,8 +35,24 @@ content_hash = hasher.finalize()
 # Print the hash of the content data
 print("Hash of the content data:", content_hash.hex())
 
+# Create signed attributes
+signed_attrs = cms.CMSAttributes([
+    cms.CMSAttribute({
+        'type': 'content_type',
+        'values': [cms.ContentType('data')]
+    }),
+    cms.CMSAttribute({
+        'type': 'signing_time',
+        'values': [core.UTCTime(datetime.utcnow().strftime('%y%m%d%H%M%SZ'))]
+    }),
+    cms.CMSAttribute({
+        'type': 'message_digest',
+        'values': [content_hash]
+    })
+])
+
 # Create the SignedData structure for detached signature
-signed_data = asn1crypto.cms.SignedData({
+signed_data = cms.SignedData({
     'version': 'v1',
     'digest_algorithms': [
         {'algorithm': 'sha256'}
@@ -52,6 +70,7 @@ signed_data = asn1crypto.cms.SignedData({
             }
         }),
         'digest_algorithm': {'algorithm': 'sha256'},
+        'signed_attrs': signed_attrs,
         'signature_algorithm': {'algorithm': 'rsassa_pkcs1v15'},
         'signature': signing_private_key.sign(
             content_hash,
@@ -62,7 +81,7 @@ signed_data = asn1crypto.cms.SignedData({
 })
 
 # Wrap the SignedData structure in a ContentInfo structure
-cms_content_info = asn1crypto.cms.ContentInfo({
+cms_content_info = cms.ContentInfo({
     'content_type': 'signed_data',
     'content': signed_data
 })
@@ -71,5 +90,5 @@ cms_content_info = asn1crypto.cms.ContentInfo({
 print("Signature:", bytes(signed_data['signer_infos'][0]['signature']).hex())
 
 # Save the CMS file in DER format
-with open("signed_data.der", "wb") as f:
+with open("signed_data_with_attrs.der", "wb") as f:
     f.write(cms_content_info.dump())
